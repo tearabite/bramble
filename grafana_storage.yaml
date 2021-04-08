@@ -1,11 +1,27 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: grafana-db
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs
+  nfs:
+    server: 11.0.0.1
+    path: "/mnt/cluster-storage/grafana"
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: grafana
   namespace: monitoring
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteMany
+  storageClassName: nfs
+  volumeName: grafana-db
   resources:
     requests:
       storage: 1Gi
