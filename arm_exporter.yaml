@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app.kubernetes.io/component: exporter
+    app.kubernetes.io/name: arm-exporter
+  name: arm-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: exporter
+      app.kubernetes.io/name: arm-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: exporter
+        app.kubernetes.io/name: arm-exporter
+    spec:
+      containers:
+        - name: arm-exporter
+          image: carlosedp/arm_exporter
+          ports:
+            - containerPort: 9243
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 250m
+              memory: 180Mi
+            requests:
+              cpu: 102m
+              memory: 180Mi
+          volumeMounts:
+            - mountPath: /host/sys
+              mountPropagation: HostToContainer
+              name: sys
+              readOnly: true
+            - mountPath: /host/root
+              mountPropagation: HostToContainer
+              name: root
+              readOnly: true
+      volumes:
+        - hostPath:
+            path: /sys
+          name: sys
+        - hostPath:
+            path: /
+          name: root
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: arm-exporter
+  namespace: monitoring
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9243"
+spec:
+  selector:
+    app.kubernetes.io/component: exporter
+    app.kubernetes.io/name: arm-exporter
+  ports:
+    - name: arm-exporter
+      protocol: TCP
+      port: 9243
+      targetPort: 9243
