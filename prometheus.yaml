@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ingress
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /prometheus/?(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus-k8s
+                port:
+                  number: 9090
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: additional-scrape-configs
+  namespace: monitoring
+type: Opaque
+data: 
+  prometheus-additional.yaml: LSBqb2JfbmFtZTogIm1vbml0b3JpbmcvYXJtLWV4cG9ydGVyIgogIGhvbm9yX3RpbWVzdGFtcHM6IHRydWUKICBzY3JhcGVfaW50ZXJ2YWw6IDE1cwogIHNjcmFwZV90aW1lb3V0OiAxMHMKICBtZXRyaWNzX3BhdGg6IC9tZXRyaWNzCiAga3ViZXJuZXRlc19zZF9jb25maWdzOgogICAgLSByb2xlOiBlbmRwb2ludHMKICAgICAgbmFtZXNwYWNlczoKICAgICAgICBuYW1lczoKICAgICAgICAgIC0gbW9uaXRvcmluZwogIHJlbGFiZWxfY29uZmlnczoKICAgIC0gc291cmNlX2xhYmVsczogW19fbWV0YV9rdWJlcm5ldGVzX2VuZHBvaW50c19uYW1lXQogICAgICByZWdleDogImFybS1leHBvcnRlciIKICAgICAgYWN0aW9uOiBrZWVwCiAgICAtIHNvdXJjZV9sYWJlbHM6IFtfX21ldGFfa3ViZXJuZXRlc19lbmRwb2ludF9ub2RlX25hbWVdCiAgICAgIHRhcmdldF9sYWJlbDogaW5zdGFuY2UK

@@ -1,0 +1,15 @@
+spec:
+  additionalScrapeConfigs:
+    name: additional-scrape-configs
+    key: prometheus-additional.yaml
+  externalUrl: http://localhost:9090/prometheus
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: 4Gi
+        storageClassName: nfs
+        volumeName: prometheus-db

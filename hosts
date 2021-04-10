@@ -1,0 +1,19 @@
+127.0.0.1 localhost
+
+11.0.0.1 bramble-master
+11.0.0.50 bramble-worker-1
+11.0.0.51 bramble-worker-2
+11.0.0.52 bramble-worker-3
+11.0.0.53 bramble-worker-4
+11.0.0.54 bramble-worker-5
+11.0.0.55 bramble-worker-6
+11.0.0.56 bramble-worker-7
+
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+
