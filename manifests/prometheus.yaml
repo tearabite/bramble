@@ -25,3 +25,17 @@ metadata:
 type: Opaque
 data: 
   prometheus-additional.yaml: LSBqb2JfbmFtZTogIm1vbml0b3JpbmcvYXJtLWV4cG9ydGVyIgogIGhvbm9yX3RpbWVzdGFtcHM6IHRydWUKICBzY3JhcGVfaW50ZXJ2YWw6IDE1cwogIHNjcmFwZV90aW1lb3V0OiAxMHMKICBtZXRyaWNzX3BhdGg6IC9tZXRyaWNzCiAga3ViZXJuZXRlc19zZF9jb25maWdzOgogICAgLSByb2xlOiBlbmRwb2ludHMKICAgICAgbmFtZXNwYWNlczoKICAgICAgICBuYW1lczoKICAgICAgICAgIC0gbW9uaXRvcmluZwogIHJlbGFiZWxfY29uZmlnczoKICAgIC0gc291cmNlX2xhYmVsczogW19fbWV0YV9rdWJlcm5ldGVzX2VuZHBvaW50c19uYW1lXQogICAgICByZWdleDogImFybS1leHBvcnRlciIKICAgICAgYWN0aW9uOiBrZWVwCiAgICAtIHNvdXJjZV9sYWJlbHM6IFtfX21ldGFfa3ViZXJuZXRlc19lbmRwb2ludF9ub2RlX25hbWVdCiAgICAgIHRhcmdldF9sYWJlbDogaW5zdGFuY2UK
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: prometheus-db
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs
+  nfs:
+    server: 11.0.0.1
+    path: "/mnt/cluster-storage/prometheus"

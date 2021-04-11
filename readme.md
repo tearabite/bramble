@@ -73,7 +73,7 @@ At this point, I recommend only booting up a single node until you get it set up
 
    Prepend the following text to the contents of the file. 
 
-   ```console
+   ```bash
    cgroup_enable=memory cgroup_memory=1
    ```
 
@@ -99,7 +99,7 @@ At this point, I recommend only booting up a single node until you get it set up
 
    Option 1: `eth1` - USB Ethernet Adapter
 
-   ```console
+   ```bash
    network:
       ethernets:
          eth0:
@@ -112,7 +112,7 @@ At this point, I recommend only booting up a single node until you get it set up
    ```
 
    Option 2: `wlan0` - On-board Wifi
-   ```console
+   ```bash
    network:
       ethernets:
          eth0:
@@ -135,7 +135,7 @@ At this point, I recommend only booting up a single node until you get it set up
 
    Modify `/etc/dhcpcd.conf` to set a static IP, and to specify the DNS servers you'd like to use. Add the following to the end of the file.
 
-   ```console
+   ```bash
    denyinterfaces eth1 wlan0
 
    interface eth0

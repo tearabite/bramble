@@ -23,7 +23,7 @@ metadata:
   name: grafana-db
 spec:
   capacity:
-    storage: 1Gi
+    storage: 5Gi
   accessModes:
     - ReadWriteMany
   storageClassName: nfs
@@ -43,7 +43,7 @@ spec:
   volumeName: grafana-db
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: Secret
