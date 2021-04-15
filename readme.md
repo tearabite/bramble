@@ -73,7 +73,7 @@ At this point, I recommend only booting up a single node until you get it set up
    Enter the default password "ubuntu". You will be prompted to immediately change the password. Go ahead and set it to something you'll remember. We'll set it up so that you don't need this password as much later. 
 1. Change the hostname to something meaningful. I chose to call my master node "bramble-master". Of course you can choose whatever you like.
    ```console
-   ubuntu@bramble-master:~$ sudo hostnamectl set-hostname bramble-master
+   ubuntu@ubuntu:~$ sudo hostnamectl set-hostname bramble-master
    ```
 1. (Optional) If you didn't do it earlier, you'll need to enable memory control groups. If you've already done this, you can skip to the next step.
    
