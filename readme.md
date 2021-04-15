@@ -1,4 +1,14 @@
 # Building a Kubernetes Cluster Using the Raspberry Pi
+
+- [Building a Kubernetes Cluster Using the Raspberry Pi](#building-a-kubernetes-cluster-using-the-raspberry-pi)
+  - [Introduction](#introduction)
+  - [Software](#software)
+    - [Burn all your SD Cards](#burn-all-your-sd-cards)
+    - [Master Setup](#master-setup)
+    - [Worker Setup](#worker-setup)
+    - [SSH Key Configuration](#ssh-key-configuration)
+  - [microk8s Setup](#microk8s-setup)
+    - [Monitoring](#monitoring)
 ## Introduction
 This article serves mainly as a brain dump of my experience building up a Kubernetes cluster using the Raspberry Pi 4 SBC. I did this purely as an educational exercise and came into it with absolutely no knowledge of Kubernetes at all. So, if you're as ignorant as I was, this may also be a useful guide for you to follow to build your own. 
 
@@ -58,17 +68,17 @@ At this point, I recommend only booting up a single node until you get it set up
 1. Locate the IP address of the node. Doing this is outside the scope of this article. I used my home network's router to look it up. Depending on your configuration, you may also have some luck simply using the default hostname "ubuntu.local" in lieu of the IP address for the subsequent steps. YMMV.
 1. SSH into the node. 
    ```console
-   # ssh ubuntu@<node-ip-address>
+   scott@macbook ~ % ssh ubuntu@<node-ip-address>
    ```
    Enter the default password "ubuntu". You will be prompted to immediately change the password. Go ahead and set it to something you'll remember. We'll set it up so that you don't need this password as much later. 
 1. Change the hostname to something meaningful. I chose to call my master node "bramble-master". Of course you can choose whatever you like.
    ```console
-   # sudo hostnamectl set-hostname bramble-master
+   ubuntu@bramble-master:~$ sudo hostnamectl set-hostname bramble-master
    ```
 1. (Optional) If you didn't do it earlier, you'll need to enable memory control groups. If you've already done this, you can skip to the next step.
    
    ```console
-   # sudo vim /boot/firmware/cmdline.txt
+   ubuntu@bramble-master:~$ sudo vim /boot/firmware/cmdline.txt
    ```
 
    Prepend the following text to the contents of the file. 
@@ -82,7 +92,7 @@ At this point, I recommend only booting up a single node until you get it set up
    The device names for these devices are _probably_ what is shown below. However, the best thing to do is to check what they are on your system using the following command: 
 
    ```console
-   # ls /sys/class/net
+   ubuntu@bramble-master:~$ ls /sys/class/net
    eth0  eth1  lo  wlan0
    ```
 
@@ -91,7 +101,7 @@ At this point, I recommend only booting up a single node until you get it set up
    Edit `/etc/netplan/50-cloud-init.yaml`.
 
    ```console
-   # sudo vim /etc/netplan/50-cloud-init.yaml
+   ubuntu@bramble-master:~$ sudo vim /etc/netplan/50-cloud-init.yaml
    ```
 
    Add the text below that corresponds to how you would prefer to interact with your cluster: USB ethernet or WiFi.
@@ -130,7 +140,7 @@ At this point, I recommend only booting up a single node until you get it set up
 1. Install and configure `dhcpcd5` in order to dish out IP addresses to all the worker nodes you'll add later.
 
    ```console
-   # sudo apt install dhcpcd5 -y
+   ubuntu@bramble-master:~$ sudo apt install dhcpcd5 -y
    ```
 
    Modify `/etc/dhcpcd.conf` to set a static IP, and to specify the DNS servers you'd like to use. Add the following to the end of the file.
@@ -149,10 +159,10 @@ At this point, I recommend only booting up a single node until you get it set up
 1. Now we can install `dnsmasq`. This will let all the worker nodes use the master node as a DNS server. 
 
    ```console
-   # sudo apt install dnsmasq
+   ubuntu@bramble-master:~$ sudo apt install dnsmasq
    ...
    ...
-   # sudo vim /etc/dnsmasq.conf
+   ubuntu@bramble-master:~$ sudo vim /etc/dnsmasq.conf
    ```
 
    I've included my `dnsmasq.conf` mainly for my own reference. But you can certainly use it as a reference as well. 
@@ -182,7 +192,7 @@ At this point, I recommend only booting up a single node until you get it set up
 1. Now we want to allow traffic _from_ our nodes _through_ the mater _to_ the internets. To do that, we'll enable forwarding in `/etc/sysctl.conf`.
 
    ```console
-   # sudo vim /etc/sysctl.conf
+   ubuntu@bramble-master:~$ sudo vim /etc/sysctl.conf
    ```
    Locate the following line and uncommend it (remove the "#" at the beginning of the line.)
 
@@ -193,20 +203,20 @@ At this point, I recommend only booting up a single node until you get it set up
    Be sure to replace `wlan0` below with whichever interface you chose to use earlier in step 7.
 
    ```console
-   # sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
-   # sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-   # sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
+   ubuntu@bramble-master:~$ sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
+   ubuntu@bramble-master:~$ sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+   ubuntu@bramble-master:~$ sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
    ```
 
    Now, because reasons, these settings wont survive a restart. I found the easiest thing to do is to install `iptables-persistent` and let it handle it.
 
    ```console
-   # sudo apt install iptables-persistent
+   ubuntu@bramble-master:~$ sudo apt install iptables-persistent
    ```
 1. This step is entirely _optional_. I, however, chose to overclock every node in my cluster. I found a 2Ghz overclock on the Raspberry Pi 4 to be perfectly stable, and my cooling solution (See Hardware) is more than adequate to keep them cool. Do this at your own risk, however.
 
    ```console
-   # sudo vim /boot/firmware/usercfg.txt
+   ubuntu@bramble-master:~$ sudo vim /boot/firmware/usercfg.txt
    ```
 
    Add the following text to the end of this file. 
@@ -227,13 +237,13 @@ Fortunately, the setup required for the workers is much less involved.
 1. Start by setting the hostname. I chose to follow a "bramble-worker-_n_" naming scheme, but this is up to you.
 
    ```console
-   # sudo hostnamectl set-hostname bramble-worker-1
+   ubuntu@ubuntu:~$ sudo hostnamectl set-hostname bramble-worker-1
    ```
 
 1. Next, just like we did for the master, we need to enable memory control groups. 
 
    ```console
-   # sudo vim /boot/firmware/cmdline.txt
+   ubuntu@bramble-worker-1:~$  sudo vim /boot/firmware/cmdline.txt
    ```
 
    and prepend this text to the existing file context:
@@ -244,7 +254,7 @@ Fortunately, the setup required for the workers is much less involved.
 1. This step is entirely _optional_. I, however, chose to overclock every node in my cluster. I found a 2Ghz overclock on the Raspberry Pi 4 to be perfectly stable, and my cooling solution (See Hardware) is more than adequate to keep them cool. Do this at your own risk, however.
 
    ```console
-   # sudo vim /boot/firmware/usercfg.txt
+   ubuntu@bramble-worker-1:~$ sudo vim /boot/firmware/usercfg.txt
    ```
 
    Add the following text to the end of this file. 
@@ -261,7 +271,7 @@ By this point, you should have the nodes themselves configured and communicating
 
 e.g.
 ```console
-# ssh -J ubuntu@bramble-master ubuntu@bramble-worker-1
+scott@macbook ~ % ssh -J ubuntu@bramble-master ubuntu@bramble-worker-1
 ```
 
 However, every time you do this, you'll need to provide the password for the done you're logging into. Since you'll be doing this a lot, we can make that easier by sharing SSH keys amongst the nodes. If you share _Node A's_ key with _Node B_, then _Node A_ will be able to SSH into _Node B_ without having to manually enter the password. You _can_ do this for every possible pair of host/client in the network, but I most just care about 
@@ -293,7 +303,7 @@ Let's set up our cluster so we don't need to bother with passwords all the time.
 1. Now you can copy this key to any machine you wish to have passwordless access to.
 
    ```console
-   # ssh-copy-id ubuntu@bramble-master
+   scott@macbook ~ % ssh-copy-id ubuntu@bramble-master
    ```
 
    This will ask for your password to the master node, but once you complete this step, you will no longer need a password when SSHing into the master from you Dev Machine.
@@ -301,7 +311,7 @@ Let's set up our cluster so we don't need to bother with passwords all the time.
 1. Test it out. SSH into the master node. No password needed!
 
    ```console
-   # ssh ubuntu@bramble-master
+   scott@macbook ~ % ssh ubuntu@bramble-master
    ```
 1. Now, from the master node, you need to repeat step 1. Then, repeat step 2 for each worker node in your cluster. 
 
