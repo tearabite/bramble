@@ -203,24 +203,155 @@ At this point, I recommend only booting up a single node until you get it set up
    ```console
    # sudo apt install iptables-persistent
    ```
+1. This step is entirely _optional_. I, however, chose to overclock every node in my cluster. I found a 2Ghz overclock on the Raspberry Pi 4 to be perfectly stable, and my cooling solution (See Hardware) is more than adequate to keep them cool. Do this at your own risk, however.
+
+   ```console
+   # sudo vim /boot/firmware/usercfg.txt
+   ```
+
+   Add the following text to the end of this file. 
+
+   ```bash
+   over_voltage=6
+   arm_freq=2000
+   ```
+
+   It's just that easy!
 
 1. Now you can restart the node. Your master node is ready to go!
 
 
+### Worker Setup
 
-WIP
-## Worker Setup
-1. `sudo hostnamectl set-hostname bramble-worker-#`
-1. `sudo vim /boot/firmware/cmdline.txt`
- - `cgroup_enable=memory cgroup_memory=1`
-1. Disable swap
+Fortunately, the setup required for the workers is much less involved. 
+1. Start by setting the hostname. I chose to follow a "bramble-worker-_n_" naming scheme, but this is up to you.
+
+   ```console
+   # sudo hostnamectl set-hostname bramble-worker-1
+   ```
+
+1. Next, just like we did for the master, we need to enable memory control groups. 
+
+   ```console
+   # sudo vim /boot/firmware/cmdline.txt
+   ```
+
+   and prepend this text to the existing file context:
+
+   ```bash
+   cgroup_enable=memory cgroup_memory=1
+   ```
+1. This step is entirely _optional_. I, however, chose to overclock every node in my cluster. I found a 2Ghz overclock on the Raspberry Pi 4 to be perfectly stable, and my cooling solution (See Hardware) is more than adequate to keep them cool. Do this at your own risk, however.
+
+   ```console
+   # sudo vim /boot/firmware/usercfg.txt
+   ```
+
+   Add the following text to the end of this file. 
+
+   ```bash
+   over_voltage=6
+   arm_freq=2000
+   ```
+
+   It's just that easy!
+
+### SSH Key Configuration
+By this point, you should have the nodes themselves configured and communicating with one another through their own isolated, dedicated subnet. And you should be able to access any of the nodes either by SSHing into your master node and then SSHing to the worker node. Or, alternatively, you can simply use the `-J` option for SSH to use your master node as a "jump box". 
+
+e.g.
+```console
+# ssh -J ubuntu@bramble-master ubuntu@bramble-worker-1
+```
+
+However, every time you do this, you'll need to provide the password for the done you're logging into. Since you'll be doing this a lot, we can make that easier by sharing SSH keys amongst the nodes. If you share _Node A's_ key with _Node B_, then _Node A_ will be able to SSH into _Node B_ without having to manually enter the password. You _can_ do this for every possible pair of host/client in the network, but I most just care about 
+
+1. Dev Computer -> Master
+1. Master -> Worker
+
+Let's set up our cluster so we don't need to bother with passwords all the time.
+
+1. First, create an SSH key from your Dev Computer. For me, this is my MacBook Pro.
+
+   ```console
+   scott@macbook ~ % ssh-keygen -t rsa
+   Generating public/private rsa key pair.
+   Enter file in which to save the key (/Users/scott/.ssh/id_rsa): /Users/scott/
+   Enter passphrase (empty for no passphrase): 
+   Enter same passphrase again: 
+   Your identification has been saved in /Users/scott/temp/id_rsa.
+   Your public key has been saved in /Users/scott/temp/id_rsa.pub.
+   The key fingerprint is:
+   SHA256:abunchofrandomlookingcharacters scott@macbook
+   The key's randomart image is:
+   +---[RSA 3072]----+
+   ...
+   +----[SHA256]-----+
+   scott@macbook ~ % 
+   ```
+
+1. Now you can copy this key to any machine you wish to have passwordless access to.
+
+   ```console
+   # ssh-copy-id ubuntu@bramble-master
+   ```
+
+   This will ask for your password to the master node, but once you complete this step, you will no longer need a password when SSHing into the master from you Dev Machine.
+
+1. Test it out. SSH into the master node. No password needed!
+
+   ```console
+   # ssh ubuntu@bramble-master
+   ```
+1. Now, from the master node, you need to repeat step 1. Then, repeat step 2 for each worker node in your cluster. 
+
 
 ## microk8s Setup
-1. `sudo snap install microk8s --classic`
-1. Run the commands to add my user to the sudoers group
-1. Add nodes
 
+Finally, the infrastructure for our cluster is complete. Now it's time for the fun part: kubernetes. 
+
+I chose to use `microk8s` as it seemed to have a good reputation, active development, and low resource usage. That last item is particularly important when running on a lower power SBC like the Raspberr Pi. 
+
+1. As we're on Ubuntu, use `snap` to install `microk8s.
+   ```console
+   # sudo snap install microk8s --classic
+   ```
+
+   Installation on my Raspberry Pi 4s takes a couple minutes for each node. Repeat this step for _every_ node in your cluster; Master and worker.
+
+1. To make our lives easier and to cutdown on repetative typing, add your `ubuntu` user to the `microk8s` group so we don't need to use `sudo` to run `kubectl`. 
+
+   ```console
+   # sudo usermod -a -G microk8s ubuntu
+   # sudo chown -f -R ubuntu ~/.kube
+   ```
+   This only really needs to be done on the _master_ node, since it's the only one you'll usually be interacting with directly. It doesn't hurt, though, if you want to do it on the workers as well. 
+
+1. Now we can add all the worker nodes. This is done by running a command on the master node which generates a command for you to run on the node you want to add. 
+
+   ```console
+   bramble-master #: microk8s add-node
+   From the node you wish to join to this cluster, run the following:
+
+   microk8s join 192.168.0.140:25000/12cdebf1459ae341848e5fbd97baa7e2
+
+   If the node you are adding is not reachable through the default interface you can use one of the following:
+
+   microk8s join 11.0.0.1:25000/12cdebf1459ae341848e5fbd97baa7e2
+   ```
+
+   You may see some more options than this. It creates one for every IP address the machine has. In this case, I chose the first one. Copy it, and head over to one of the nodes you want to add.
+
+   ```console
+   bramble-worker-1 #: microk8s join 192.168.0.140:25000/12cdebf1459ae341848e5fbd97baa7e2
+   ```
+
+   Note that if you did not complete step 2 for each of your workers, you will need to prepend this command with `sudo` in order for it to work. 
+
+1. Repeat these steps for every node you wish to add. 
+
+### Monitoring
 1. `microk8s enable prometheus`
-1. Add ingress with `sudo microk8s kubectl apply -f grafana.yaml`
-1. Patch grafana with `sudo microk8s kubectl patch deployment grafana -n monitoring --patch "$(cat grafana_patch.yaml)"`
-1. Patch prometheus with `` 
+1. `microk8s enable ingress`
+1. Add an ingress and persistent storage for Grafana with. `kubectl apply -f grafana.yaml`
+1. Patch grafana with `kubectl patch deployment grafana -n monitoring --patch "$(cat grafana_patch.yaml)"`
