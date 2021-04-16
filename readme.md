@@ -10,7 +10,11 @@
   - [microk8s Setup](#microk8s-setup)
     - [Monitoring](#monitoring)
 ## Introduction
+![Bramble 3D Model](./img/bramble_render.png)
+
 This article serves mainly as a brain dump of my experience building up a Kubernetes cluster using the Raspberry Pi 4 SBC. I did this purely as an educational exercise and came into it with absolutely no knowledge of Kubernetes at all. So, if you're as ignorant as I was, this may also be a useful guide for you to follow to build your own. 
+
+![Bramble 3D Model](./img/bramble_front.png)
 
 I made this whole thing into quite a bit of a project. I not only set up a network of Raspberry Pis, I also designed and built a custom "rack" for the whole thing. Details about all of this along with manifests, helpful scripts, CAD models, and a chronicle of the headaches I ran into are all covered in this article.
 
