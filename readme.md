@@ -9,6 +9,8 @@
     - [SSH Key Configuration](#ssh-key-configuration)
   - [microk8s Setup](#microk8s-setup)
     - [Monitoring](#monitoring)
+    - [Ingress](#ingress)
+  - [WIP BELOW THIS POINT - Check back soon!](#wip-below-this-point---check-back-soon)
 ## Introduction
 ![Bramble 3D Model](./img/bramble_render.png)
 
@@ -321,30 +323,29 @@ Let's set up our cluster so we don't need to bother with passwords all the time.
 
 
 ## microk8s Setup
-
 Finally, the infrastructure for our cluster is complete. Now it's time for the fun part: kubernetes. 
 
 I chose to use `microk8s` as it seemed to have a good reputation, active development, and low resource usage. That last item is particularly important when running on a lower power SBC like the Raspberr Pi. 
 
 1. As we're on Ubuntu, use `snap` to install `microk8s.
    ```console
-   # sudo snap install microk8s --classic
+   ubuntu@bramble-master:~$ sudo snap install microk8s --classic
    ```
 
    Installation on my Raspberry Pi 4s takes a couple minutes for each node. Repeat this step for _every_ node in your cluster; Master and worker.
 
-1. To make our lives easier and to cutdown on repetative typing, add your `ubuntu` user to the `microk8s` group so we don't need to use `sudo` to run `kubectl`. 
+2. To make our lives easier and to cutdown on repetative typing, add your `ubuntu` user to the `microk8s` group so we don't need to use `sudo` to run `kubectl`. 
 
    ```console
-   # sudo usermod -a -G microk8s ubuntu
-   # sudo chown -f -R ubuntu ~/.kube
+   ubuntu@bramble-master:~$ sudo usermod -a -G microk8s ubuntu
+   ubuntu@bramble-master:~$ sudo chown -f -R ubuntu ~/.kube
    ```
    This only really needs to be done on the _master_ node, since it's the only one you'll usually be interacting with directly. It doesn't hurt, though, if you want to do it on the workers as well. 
 
-1. Now we can add all the worker nodes. This is done by running a command on the master node which generates a command for you to run on the node you want to add. 
+3. Now we can add all the worker nodes. This is done by running a command on the master node which generates a command for you to run on the node you want to add. 
 
    ```console
-   bramble-master #: microk8s add-node
+   ubuntu@bramble-master:~$ microk8s add-node
    From the node you wish to join to this cluster, run the following:
 
    microk8s join 192.168.0.140:25000/12cdebf1459ae341848e5fbd97baa7e2
@@ -357,15 +358,46 @@ I chose to use `microk8s` as it seemed to have a good reputation, active develop
    You may see some more options than this. It creates one for every IP address the machine has. In this case, I chose the first one. Copy it, and head over to one of the nodes you want to add.
 
    ```console
-   bramble-worker-1 #: microk8s join 192.168.0.140:25000/12cdebf1459ae341848e5fbd97baa7e2
+   ubuntu@bramble-worker-1:~$ microk8s join 192.168.0.140:25000/12cdebf1459ae341848e5fbd97baa7e2
    ```
 
    Note that if you did not complete step 2 for each of your workers, you will need to prepend this command with `sudo` in order for it to work. 
 
-1. Repeat these steps for every node you wish to add. 
+4. Repeat these steps for every node you wish to add. 
 
 ### Monitoring
-1. `microk8s enable prometheus`
-1. `microk8s enable ingress`
+Kubernetes is hopefully now up and running. Among the first things I did once I got to this point was to set up a monitoring stack. Kubernetes can host the containers that will actually allow you to monitor both Kubernetes as well as the nodes on which it runs. Kubernetes monitoring Kubernetes!
+
+The most prolific stack used for this purpose, and indeed the one I am familiar with through my day job, is [Prometheus](https://prometheus.io) + [Grafana](https://grafana.com).
+
+- Prometheus: The thing what exports the stuff.
+- Grafana: The thing what makes purdy graphs and widgets of the stuff.
+
+Microk8s is great here because you can install and configure *both* by simply enabling it as follows.
+
+```console
+ubuntu@bramble-master:~$ microk8s enable prometheus
+```
+
+Although you only "enable" prometheus, it also sets up Grafana and even preconfigures Prometheus as a datasource in Grafana. You're ready to go!
+
+For me, though, there were two things I wanted to get done that this command didn't do for me. 
+
+1. **Ingress**. I want to be able to access Grafana from any browser on my home network.
+2. **Persistence**. Both Grafana and Prometheus come preconfigured with `emptyDir: {}`, volatile storage. This means if the pod for either application is ever restarted, moved from one node to another, or for any reason crashes, then all your configured dashboards and all your collected metrics will be erased. 
+
+There are some projects that compile a lot of great yaml manifests for setting up some really intricate monitoring dashboards with minimal effort (e.g. [cluster-monitoring](https://github.com/carlosedp/cluster-monitoring)). While, I did eventually end up using these projecs, I wanted to learn how to do the two things I mentioned above on my own first. I've included the manifests I eventually came up with in this repo, but I'll break them down here as we come to them. 
+
+### Ingress
+Let's start by enabling an nginx ingress controller. Microk8s, again, makes this really easy.
+
+```console
+ubuntu@bramble-master:~$ microk8s enable ingress
+```
+This step enables a DaemonSet which runs a pod on each of your nodes running nginx as a proxy to whatever service you configure your ingress for. Let's take a look at the ingress I created for grafana.
+
+WIP BELOW THIS POINT - Check back soon!
+---
+
 1. Add an ingress and persistent storage for Grafana with. `kubectl apply -f grafana.yaml`
-1. Patch grafana with `kubectl patch deployment grafana -n monitoring --patch "$(cat grafana_patch.yaml)"`
+2. Patch grafana with `kubectl patch deployment grafana -n monitoring --patch "$(cat grafana_patch.yaml)"`
