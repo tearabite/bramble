@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  labels:
+    app: mariadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      volumes:
+        - name: mariadb-storage
+          persistentVolumeClaim:
+            claimName: mariadb
+      containers:
+        - name: mariadb
+          image: mariadb
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: moo
+          volumeMounts:
+            - name: mariadb-storage
+              mountPath: /var/lib/mysql
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: mariadb-external
+spec:
+  type: NodePort
+  selector:
+    app: mariadb
+  ports:
+    - nodePort: 30306
+      port: 8080
+      targetPort: 3306
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: mariadb-0
+spec:
+  type: ClusterIP
+  selector:
+    app: mariadb
+  ports:
+    - port: 8080
+      targetPort: 3306
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mariadb
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
